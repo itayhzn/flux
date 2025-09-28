@@ -10,7 +10,7 @@ from PIL import ExifTags, Image
 from transformers import pipeline
 
 from flux.cli import SamplingOptions
-from flux.sampling import denoise, get_noise, get_schedule, prepare, unpack
+from flux.sampling import denoise, denoise_mock_cfg, get_noise, get_schedule, prepare, unpack
 from flux.util import (
     configs,
     embed_watermark,
@@ -23,6 +23,32 @@ from flux.util import (
 
 NSFW_THRESHOLD = 0.85
 
+
+def encode_params(args):
+    def escape(s):
+        return s.replace(" ", "_").replace("/", "_").replace(",", "_") \
+                 .replace("'", "_").replace('"', "_")[:60]
+    
+    formatted_time = datetime.now().strftime("%Y%m%d_%H%M%S")
+    
+    s = f"{formatted_time}_"
+
+    if args is None:
+        return s + "no_args"
+
+    if args.experiment_name:
+        s += f"{args.experiment_name}_"
+    if args.prompt:
+        s += f"{escape(args.prompt)}_"
+    if args.base_seed:
+        s += f"{args.base_seed}_"
+    if args.loss_name:
+        s += f"loss={args.loss_name}_"
+
+    if s.endswith("_"):
+        s = s[:-1]
+
+    return s
 
 def get_models(name: str, device: torch.device, offload: bool, is_schnell: bool):
     t5 = load_t5(device, max_length=256 if is_schnell else 512)
@@ -59,6 +85,7 @@ class ModelWrapper:
         init_image=None,
         image2image_strength=0.0,
         add_sampling_metadata=True,
+        args=None,
     ):
         seed = int(seed)
         if seed == -1:
@@ -124,7 +151,8 @@ class ModelWrapper:
 
         # denoise initial noise
         x = denoise(self.model, **inp, timesteps=timesteps, guidance=opts.guidance)
-
+        # x = denoise_mock_cfg(self.model, **inp, timesteps=timesteps, guidance=opts.guidance, encoded_params=encode_params(args))
+        
         # offload model, load autoencoder to gpu
         if self.offload:
             self.model.cpu()
@@ -223,6 +251,7 @@ if __name__ == "__main__":
         init_image=None,
         image2image_strength=0.0,
         add_sampling_metadata=True,
+        args=args,
     )
 
     if error:

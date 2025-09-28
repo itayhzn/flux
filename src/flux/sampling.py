@@ -1,4 +1,5 @@
 import math
+import os
 from typing import Callable
 
 import numpy as np
@@ -13,6 +14,7 @@ from .modules.conditioner import HFEmbedder
 from .modules.image_embedders import CannyImageEncoder, DepthImageEncoder, ReduxImageEncoder
 from .util import PREFERED_KONTEXT_RESOLUTIONS
 
+# from utils import save_tensors
 
 def get_noise(
     num_samples: int,
@@ -352,6 +354,85 @@ def denoise(
 
     return img
 
+def denoise_mock_cfg(
+    model: Flux,
+    # model input
+    img: Tensor,
+    img_ids: Tensor,
+    txt: Tensor,
+    txt_ids: Tensor,
+    vec: Tensor,
+    # sampling parameters
+    timesteps: list[float],
+    guidance: float = 4.0,
+    # extra img tokens (channel-wise)
+    img_cond: Tensor | None = None,
+    # extra img tokens (sequence-wise)
+    img_cond_seq: Tensor | None = None,
+    img_cond_seq_ids: Tensor | None = None,
+    encoded_params: str = ""
+):
+    # this is ignored for schnell
+    guidance_vec_cond = torch.full((img.shape[0],), guidance, device=img.device, dtype=img.dtype)
+    guidance_vec_uncond = torch.zeros((img.shape[0],), device=img.device, dtype=img.dtype)
+    
+    for t_curr, t_prev in zip(timesteps[:-1], timesteps[1:]):
+        t_vec = torch.full((img.shape[0],), t_curr, dtype=img.dtype, device=img.device)
+        img_input = img
+        img_input_ids = img_ids
+        if img_cond is not None:
+            img_input = torch.cat((img, img_cond), dim=-1)
+        if img_cond_seq is not None:
+            assert (
+                img_cond_seq_ids is not None
+            ), "You need to provide either both or neither of the sequence conditioning"
+            img_input = torch.cat((img_input, img_cond_seq), dim=1)
+            img_input_ids = torch.cat((img_input_ids, img_cond_seq_ids), dim=1)
+
+        with torch.enable_grad():
+            for param in model.parameters():
+                param.requires_grad = False
+            img_input.requires_grad = True
+            img_input.grad = None
+
+            pred_cond = model(
+                img=img_input,
+                img_ids=img_input_ids,
+                txt=txt,
+                txt_ids=txt_ids,
+                y=vec,
+                timesteps=t_vec,
+                guidance=guidance_vec_cond,
+            )
+            pred_uncond = model(
+                img=img_input,
+                img_ids=img_input_ids,
+                txt=txt,
+                txt_ids=txt_ids,
+                y=vec,
+                timesteps=t_vec,
+                guidance=guidance_vec_uncond,
+            )
+
+            loss = ((pred_cond - pred_uncond) ** 2).mean()
+            loss.backward()
+            grad = img_input.grad
+            save_tensors(f"tensors/", {
+                "img_input": img_input,
+                "pred_cond": pred_cond,
+                "pred_uncond": pred_uncond,
+                "grad": grad,
+            })
+
+            pred_cond = pred_cond.detach().clone()
+            img = img.detach().clone()
+
+            if img_input_ids is not None:
+                pred_cond = pred_cond[:, : img.shape[1]]
+
+            img = img + (t_prev - t_curr) * pred_cond
+
+    return img
 
 def unpack(x: Tensor, height: int, width: int) -> Tensor:
     return rearrange(
@@ -362,3 +443,20 @@ def unpack(x: Tensor, height: int, width: int) -> Tensor:
         ph=2,
         pw=2,
     )
+
+def save_tensors(save_tensors_dir, tensors_dict):
+    r"""
+    Save tensors to disk for debugging purposes.
+    """
+    # mkdir if not exists
+    if not os.path.exists(save_tensors_dir):
+        os.makedirs(save_tensors_dir)
+
+    print(f'======= Saving tensors to {save_tensors_dir}')
+    for name, tensor in tensors_dict.items():
+        if isinstance(tensor, torch.Tensor):
+            print(f'\tSaving tensor {name} to {os.path.join(save_tensors_dir, name)}')
+            torch.save(tensor, os.path.join(save_tensors_dir, f'{name}.pt'))
+        else:
+            print(f'{name} is not a tensor, skipping save. Type: {type(tensor)}')
+    print(f'======= Saved tensors to {save_tensors_dir}')
