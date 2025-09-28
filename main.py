@@ -182,7 +182,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Flux")
     parser.add_argument(
-        "--name", type=str, default="flux-schnell", choices=list(configs.keys()), help="Model name"
+        "--name", type=str, default="flux-dev", choices=list(configs.keys()), help="Model name"
     )
     parser.add_argument(
         "--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu", help="Device to use"
@@ -197,8 +197,20 @@ if __name__ == "__main__":
     parser.add_argument("--guidance", type=float, default=3.5, help="Guidance")
     parser.add_argument("--seed", type=int, default=42, help="Seed")
     parser.add_argument("--prompt", type=str, default="A white cat playing with a red ball.", help="Prompt")
-    
+    parser.add_argument("--experiment_name", type=str, default="default", help="Experiment name for logging")
+
     args = parser.parse_args()
+
+    datetime_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    # redirect output to a file
+    with open(f"jobs-out-err/{datetime_str}_{args.experiment_name}.out", "w") as f:
+        os.dup2(f.fileno(), 1)
+    # redirect error output to a file
+    with open(f"jobs-out-err/{datetime_str}_{args.experiment_name}.err", "w") as f:
+        os.dup2(f.fileno(), 2)
+    
+    os.system('nvidia-smi')
 
     wrapper = ModelWrapper(args.name, args.device, args.offload, args.track_usage)
     img, seed, filename, error = wrapper.generate_image(
