@@ -81,6 +81,8 @@ def get_checkpoint_path(repo_id: str, filename: str, env_var: str) -> Path:
 
     local_path = checkpoint_dir / filename
 
+    print(f"local_path: {local_path}")
+
     if not local_path.exists():
         print(f"Downloading {filename} from {repo_id} to {local_path}")
         try:
@@ -660,6 +662,8 @@ def load_flow_model(name: str, device: str | torch.device = "cuda", verbose: boo
     config = configs[name]
 
     ckpt_path = str(get_checkpoint_path(config.repo_id, config.repo_flow, "FLUX_MODEL"))
+
+    print(f'ckpt_path: {ckpt_path}')
 
     with torch.device("meta"):
         if config.lora_repo_id is not None and config.lora_filename is not None:
