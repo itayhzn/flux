@@ -417,11 +417,11 @@ def denoise_mock_cfg(
             loss = ((pred_cond - pred_uncond) ** 2).mean()
             loss.backward()
             grad = img_input.grad
-            save_tensors(f"tensors/", {
-                "img_input": img_input,
-                "pred_cond": pred_cond,
-                "pred_uncond": pred_uncond,
-                "grad": grad,
+            save_tensors(f"tensors/{encoded_params}", {
+                f"img_input_t={t_curr}": img_input,
+                f"pred_cond_t={t_curr}": pred_cond,
+                f"pred_uncond_t={t_curr}": pred_uncond,
+                f"grad_t={t_curr}": grad,
             })
 
             pred_cond = pred_cond.detach().clone()

@@ -150,8 +150,8 @@ class ModelWrapper:
             self.model = self.model.to(self.device)
 
         # denoise initial noise
-        x = denoise(self.model, **inp, timesteps=timesteps, guidance=opts.guidance)
-        # x = denoise_mock_cfg(self.model, **inp, timesteps=timesteps, guidance=opts.guidance, encoded_params=encode_params(args))
+        # x = denoise(self.model, **inp, timesteps=timesteps, guidance=opts.guidance)
+        x = denoise_mock_cfg(self.model, **inp, timesteps=timesteps, guidance=opts.guidance, encoded_params=encode_params(args))
         
         # offload model, load autoencoder to gpu
         if self.offload:
