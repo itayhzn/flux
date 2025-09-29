@@ -20,7 +20,7 @@ RUN apt update && \
 #-------------------------------------------------
 # USER vscode
 
-RUN ln -s /usr/local/cuda-12.6 /usr/local/cuda || true
+RUN ln -s /usr/local/cuda-12.9 /usr/local/cuda || true
 
 ENV CUDA_HOME=/usr/local/cuda
 ENV PATH=${CUDA_HOME}/bin:${PATH}
@@ -40,8 +40,6 @@ RUN cd /tmp && \
     rm ./Miniconda3-latest-Linux-x86_64.sh
 
 ENV PATH="/root/miniconda3/bin:${PATH}"
-ENV PYTHONPATH=/storage/itaytuviah/flux/src:${PYTHONPATH}
-
 ENV CONDA_PLUGINS_AUTO_ACCEPT_TOS=true
 
 #-------------------------------------------------

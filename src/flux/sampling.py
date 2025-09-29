@@ -393,8 +393,16 @@ def denoise_mock_cfg(
         with torch.enable_grad():
             for param in model.parameters():
                 param.requires_grad = False
-            img_input.requires_grad = True
+            img_input = img_input.detach().requires_grad_()
             img_input.grad = None
+            txt = txt.detach()
+            txt_ids = txt_ids.detach()
+            vec = vec.detach()
+            t_vec = t_vec.detach()
+            guidance_vec_cond = guidance_vec_cond.detach()
+            guidance_vec_uncond = guidance_vec_uncond.detach()
+            if img_input_ids is not None:
+                img_input_ids = img_input_ids.detach()
 
             pred_cond = model(
                 img=img_input,
