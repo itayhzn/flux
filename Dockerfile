@@ -1,5 +1,5 @@
 
-FROM nvidia/cuda:12.9.1-cudnn-devel-ubuntu22.04
+FROM nvidia/cuda:12.6.3-cudnn-devel-ubuntu22.04
 ENV DEBIAN_FRONTEND=noninteractive
 
 SHELL [ "bash", "-c" ]
@@ -20,7 +20,7 @@ RUN apt update && \
 #-------------------------------------------------
 # USER vscode
 
-RUN ln -s /usr/local/cuda-12.9 /usr/local/cuda || true
+# RUN ln -s /usr/local/cuda-12.6 /usr/local/cuda || true
 
 ENV CUDA_HOME=/usr/local/cuda
 ENV PATH=${CUDA_HOME}/bin:${PATH}
@@ -54,6 +54,13 @@ RUN conda env remove -n myenv -y || true && \
     conda clean -afy
 
 RUN conda run -n myenv bash -lc 'which nvcc && nvcc --version'
+
+RUN conda run -n myenv python -c "import torch,os,sys; \
+print('python:', sys.version.split()[0]); \
+print('torch:', torch.__version__); \
+print('torch.version.cuda:', torch.version.cuda); \
+print('is_available:', torch.cuda.is_available()); \
+print('CUDA_HOME:', os.environ.get('CUDA_HOME'))"
 
 #RUN conda run -n llava_yaml pip install flash-attn --no-build-isolation --no-cache-dir
 RUN if command -v nvcc >/dev/null 2>&1; then \
