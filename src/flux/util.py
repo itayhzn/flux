@@ -663,7 +663,7 @@ def load_flow_model(name: str, device: str | torch.device = "cuda", verbose: boo
 
     ckpt_path = str(get_checkpoint_path(config.repo_id, config.repo_flow, "FLUX_MODEL"))
 
-    print(f'ckpt_path: {ckpt_path}')
+    print(f'ckpt_path: {ckpt_path}\ncwd: {os.getcwd()}')
 
     with torch.device("meta"):
         if config.lora_repo_id is not None and config.lora_filename is not None:
