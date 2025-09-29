@@ -40,8 +40,8 @@ def encode_params(args):
         s += f"{args.experiment_name}_"
     if args.prompt:
         s += f"{escape(args.prompt)}_"
-    if args.base_seed:
-        s += f"{args.base_seed}_"
+    if args.seed:
+        s += f"{args.seed}_"
     if args.loss_name:
         s += f"loss={args.loss_name}_"
 
@@ -151,7 +151,7 @@ class ModelWrapper:
 
         # denoise initial noise
         # x = denoise(self.model, **inp, timesteps=timesteps, guidance=opts.guidance)
-        x = denoise_mock_cfg(self.model, **inp, timesteps=timesteps, guidance=opts.guidance, encoded_params=encode_params(args))
+        x = denoise_mock_cfg(self.model, **inp, timesteps=timesteps, guidance=opts.guidance, encoded_params=encode_params(args), loss_name=args.loss_name if args else "mse")
         
         # offload model, load autoencoder to gpu
         if self.offload:
@@ -226,6 +226,7 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int, default=42, help="Seed")
     parser.add_argument("--prompt", type=str, default="A white cat playing with a red ball.", help="Prompt")
     parser.add_argument("--experiment_name", type=str, default="default", help="Experiment name for logging")
+    parser.add_argument("--loss_name", type=str, default="mse", help="Loss to compute gradients for")
 
     args = parser.parse_args()
 

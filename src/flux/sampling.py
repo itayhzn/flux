@@ -370,7 +370,8 @@ def denoise_mock_cfg(
     # extra img tokens (sequence-wise)
     img_cond_seq: Tensor | None = None,
     img_cond_seq_ids: Tensor | None = None,
-    encoded_params: str = ""
+    encoded_params: str = "",
+    loss_name: str = "mse",
 ):
     # this is ignored for schnell
     guidance_vec_cond = torch.full((img.shape[0],), guidance, device=img.device, dtype=img.dtype)
@@ -414,7 +415,12 @@ def denoise_mock_cfg(
                 guidance=guidance_vec_uncond,
             )
 
-            loss = ((pred_cond - pred_uncond) ** 2).mean()
+            loss = None
+            if loss_name == "mse":
+                loss = ((pred_cond - pred_uncond) ** 2).mean()
+            else:
+                raise NotImplementedError(f"Loss {loss_name} not implemented")
+            
             loss.backward()
             grad = img_input.grad
             save_tensors(f"tensors/{encoded_params}", {
